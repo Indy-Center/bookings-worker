@@ -1,8 +1,12 @@
 name: CI
 
-# No push trigger: on main, CI runs inside build-and-deploy.yml, so it still runs once per commit.
+# Runs on pull requests and pushes to main. build-and-deploy.yml is manual-only, so it calls this as a
+# reusable workflow (workflow_call) when it is run; that run is not a push, so CI never runs twice.
 on:
   pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
   workflow_call:
 
 permissions:
