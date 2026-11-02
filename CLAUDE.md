@@ -1,0 +1,76 @@
+# CLAUDE.md
+
+Notes for Claude Code (and anyone else) working in this repo. The README says what the worker does and how to call it; this file says why it is built this way and how to work on it.
+
+## Rules for this repo
+
+- **Never `git push` without explicit permission** from the user in that moment. Committing locally is fine when asked. A push covers only the one the user asked for; do not infer permission from "make it run" or "fix it".
+- **Do not turn on automatic deploys.** `build-and-deploy.yml` is manual-only (`workflow_dispatch`) while the worker is being built. Do not add a `push` trigger to it, and do not run it, without being told to.
+- A push to `main` runs CI (`ci.yml`), which only checks. Warn the user before a push if anything else would trigger.
+- Do not commit secrets. `BOOKING_API_URL` and `BOOKING_API_KEY` are Worker secrets given to the team later; `.dev.vars` is gitignored.
+
+## What this is
+
+A Cloudflare Worker (`bookings`) that wraps the ATC booking API (https://bookings.zlcartcc.org/api-docs, a VATSIM ATC booking system) for other Indy Center Workers. Jira: DEV-230 (this worker), DEV-231 (CMS keeps the bookable positions list), DEV-232 (Training Tools manages the roster and T2 endorsements), DEV-233 (Community website uses this worker for all booking needs). The Community website is Thomas Henkel's; CMS and Training Tools are ATM's.
+
+Published as `@indy-center/bookings-worker` (types only, from `src/client/`). Repo: https://github.com/Indy-Center/bookings-worker.
+
+## Design decisions (agreed with the user)
+
+- **Per-consumer entrypoints** in `src/index.ts`: `Bookings` (default, Community), `Positions` (CMS), `Roster` (Training Tools). Each app binds to its own with `"entrypoint": "..."`, so it can only call what it needs. Positions replace and roster prune are destructive, which is why they are not on one shared class.
+- **Callers are fire and forget; all error handling lives here.** Every write returns once queued. `src/consume.ts` retries rate limits (using `RateLimit-Reset`), 5xx, network errors and 401/403 with backoff (up to `MAX_RETRIES`, then the dead-letter queue and an alert). Permanent refusals (400 overlap/wrong org, 409, 422) are dropped, logged and alerted. A 404 on cancel/update gets 3 tries 30s apart before it is believed, because a queue only keeps order as far as it can and the create may still be queued.
+- **Reads return data**, via `src/reads.ts`: cached 30s in the Workers Cache API, with a stale copy kept an hour and served if the booking system is down.
+- **Malformed input throws before queueing** (`src/validate.ts`), matching indy-larry. Expected failures are not returned as a result union or thrown as custom error classes, because callers never see upstream outcomes.
+- **Alerts** go to a staff channel through Larry (`indy-larry` Worker, `LARRY.enqueue`), named by `FAILURE_ALERT_CHANNEL`. Empty means log only. Alerts never ping (`allowedMentions: { parse: [] }`).
+- **Writes use the `/bookings/external/*` endpoints** with a caller-supplied `externalId`, so retries are idempotent and update/cancel address the booking by that ID.
+- **Only fields Indy Center needs** are passed through: `division`/`subdivision` and timestamps are dropped, `cid` is a number, times are `Date`, and the feed's `mentoring` type is normalized to `training`.
+- **Endorsements**: `grantEndorsement`/`revokeEndorsement` exist as a contract for Training Tools but throw "not available yet". The booking docs list endorsements and GCAP restrictions only under `/org/session/*`, which needs a portal session, not the API key.
+- **Roster**: `upsertMembers` never removes anyone; `replaceRoster` sets `prune: true`, refuses an empty list and is capped at 1200 members (one queue message is 128 KB, and a prune cannot be split). `upsertMembers` chunks at 1000.
+
+## Layout
+
+- `src/index.ts`: the three entrypoints and the `queue()` handler (on the default export, like Larry).
+- `src/client/`: the published types and RPC interfaces. Bump `version` in `package.json` when this changes; merging without a bump publishes nothing.
+- `src/validate.ts`, `src/wire.ts`: input checks and mapping to and from the booking API's JSON.
+- `src/upstream.ts`: the one place that calls the booking API; classifies results as `retry`, `not_found` or `rejected`.
+- `src/jobs.ts`: queue job types and the request each becomes. `positionsBody` is the one place to change the positions payload shape.
+- `src/consume.ts`, `src/reads.ts`: queue consumer and cached reads.
+- `tests/`: Vitest, with an injected `fetch` and fake cache (see `tests/helpers.ts`).
+- `.github/workflows/ci.yml`: runs on pull requests, pushes to `main`, manually, and via `workflow_call`.
+- `.github/workflows/build-and-deploy.yml`: manual-only deploy plus npm publish (trusted publishing).
+
+## Commands
+
+```bash
+npm install
+npm run cf-typegen   # generates worker-configuration.d.ts (gitignored); run after changing wrangler.jsonc
+npm run typecheck
+npm test             # runs build:lib first, then Vitest
+npm run lint         # prettier --check; npm run format to fix
+npx wrangler deploy --dry-run --outdir dist-check   # what CI's "Worker bundles" step runs
+```
+
+Style: tabs, single quotes, no trailing commas, 100 columns (Prettier). Matches the org's other Workers (`discord-bot`). The definition of done in the team's docs: you ran it, tests cover the change, CI is green, the README still describes reality.
+
+## Org conventions this follows
+
+From https://tech.flyindycenter.com and the `indy-larry` worker (`Code_Work/indy-larry/worker`):
+
+- No HTTP between Workers, no shared secrets, no CORS: service bindings only.
+- If a person is waiting, use RPC and keep it fast; if nobody is, use a queue.
+- An RPC worker is a `WorkerEntrypoint` with its consumer types published from `src/client/`.
+- CI order: format, types, build, tests. Branching and Jira rules are under `/agreements/` in the docs.
+- Deploy secrets are re-set on every deploy from `ENV_*` repo secrets.
+
+## Not deployed yet
+
+Nothing is live. Before the first deploy: create the queues `bookings-jobs` and `bookings-jobs-dlq`; add repo secrets `CLOUDFLARE_WORKERS_API_KEY`, `ENV_BOOKING_API_URL` (including `/api`) and `ENV_BOOKING_API_KEY`; optionally the repo variable `ENV_FAILURE_ALERT_CHANNEL`; set npm trusted publishing to this repo and `build-and-deploy.yml`.
+
+## Open questions
+
+- **Positions body**: the docs show `PUT /org/positions` as `{ "positions": [...] }` without saying whether items are strings or `{ callsign }` objects. We send strings. Verify against the real API.
+- **Endorsements**: ask the booking system's maintainers whether an API-key path exists for T2 endorsements. ATM owns this question.
+- **Ordering**: a cancel sent right after a create that keeps failing could be processed first. The not-found retries cover the common case only.
+- **Rejected bookings are invisible** to callers: a refused booking never appears in `listOrgBookings`, so the Community UI should show "pending" until its `externalId` shows up.
+- **Shared rate limit**: the booking API limits 100 requests per 15 minutes per client address, shared by every app through this worker.
+- **Booking API quirks to remember**: REST uses ISO times and string CIDs; the change feed uses `YYYY-MM-DD HH:MM:SS` UTC, numeric CIDs and calls training `mentoring`. Bearer bookings need the target CID on the roster with rating S1 or higher; solo and GCAP overrides are portal-only. The change feed (`/booking-events`) is not wrapped yet; a follow-up if Community wants live updates.
