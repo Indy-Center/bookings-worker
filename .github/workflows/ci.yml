@@ -1,0 +1,43 @@
+name: CI
+
+# No push trigger: on main, CI runs inside build-and-deploy.yml, so it still runs once per commit.
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate Cloudflare types
+        run: npm run cf-typegen
+
+      # Cheapest to fail first: format, types, then tests (which build the published types first).
+      - name: Format
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # Lists what npm would publish, so a broken client package fails here rather than at npm publish.
+      - name: Client package
+        run: npm pack --dry-run
+
+      # Bundles the Worker without uploading it, so a bad wrangler.jsonc or import fails here, not at deploy.
+      - name: Worker bundles
+        run: npx wrangler deploy --dry-run --outdir dist-check

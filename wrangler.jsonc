@@ -1,0 +1,37 @@
+// The bookings Worker. Other Workers bind to it as a service and call its methods; see the README.
+// It has no fetch handler, so it isn't reachable from the internet.
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "bookings",
+	"account_id": "afd63515948c9b2188ce14ef1504b2c1",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-01",
+	"observability": {
+		"enabled": true
+	},
+	// BOOKING_API_URL (including /api) and BOOKING_API_KEY are Worker secrets, set by the deploy from
+	// the ENV_BOOKING_API_URL and ENV_BOOKING_API_KEY repo secrets. For wrangler dev, use .dev.vars.
+	// FAILURE_ALERT_CHANNEL (a Larry SEND_CHANNELS name) is passed by the deploy with --var; leave it
+	// empty and failures are only logged.
+	"vars": {
+		"FAILURE_ALERT_CHANNEL": ""
+	},
+	// Every write is queued: callers fire and forget, and consume() retries or drops it.
+	"queues": {
+		"producers": [{ "binding": "BOOKINGS_QUEUE", "queue": "bookings-jobs" }],
+		"consumers": [
+			{
+				"queue": "bookings-jobs",
+				"max_batch_size": 10,
+				"max_batch_timeout": 2,
+				"max_retries": 8,
+				// One batch at a time keeps us inside the booking API's rate limits and keeps
+				// a booking's create, update and cancel in the order they were sent, as far as a queue can.
+				"max_concurrency": 1,
+				"dead_letter_queue": "bookings-jobs-dlq"
+			}
+		]
+	},
+	// Larry (indy-larry) posts failure alerts. Optional at runtime: with no channel set, nothing is sent.
+	"services": [{ "binding": "LARRY", "service": "indy-larry" }]
+}

@@ -1,0 +1,17 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"rootDir": "src/client",
+		"outDir": "dist",
+		"declaration": true,
+		"declarationMap": true,
+		"emitDeclarationOnly": false,
+		"noEmit": false,
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"isolatedModules": true,
+		"types": ["@cloudflare/workers-types"]
+	},
+	"include": ["src/client/**/*"],
+	"exclude": []
+}

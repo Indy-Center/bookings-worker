@@ -1,0 +1,102 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.event.repository.name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  # Needs the CLOUDFLARE_WORKERS_API_KEY repo secret (Workers Scripts:Edit, Queues:Edit) and the
+  # bookings-jobs and bookings-jobs-dlq queues (README, Setup).
+  deploy:
+    needs: ci # skipped if any check fails
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_API_KEY }}
+      FAILURE_ALERT_CHANNEL: ${{ vars.ENV_FAILURE_ALERT_CHANNEL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate Cloudflare types
+        run: npm run cf-typegen
+
+      # Left unset, the alert channel is empty and failures are only logged.
+      - name: Deploy
+        run: npx wrangler deploy --var "FAILURE_ALERT_CHANNEL:$FAILURE_ALERT_CHANNEL"
+
+      # Re-set on every deploy so they stay in step with the repo secrets.
+      - name: Set BOOKING_API_URL
+        env:
+          BOOKING_API_URL: ${{ secrets.ENV_BOOKING_API_URL }}
+        run: printf '%s' "$BOOKING_API_URL" | npx wrangler secret put BOOKING_API_URL
+
+      - name: Set BOOKING_API_KEY
+        env:
+          BOOKING_API_KEY: ${{ secrets.ENV_BOOKING_API_KEY }}
+        run: printf '%s' "$BOOKING_API_KEY" | npx wrangler secret put BOOKING_API_KEY
+
+  # Publishes the callers' types (src/client) to npm when package.json names a version npm doesn't
+  # have yet. Merging without a version bump publishes nothing.
+  #
+  # No token: npm trusts this workflow directly ("trusted publishing"). On npmjs.com, the package's
+  # settings name this repository and this file, build-and-deploy.yml, with no environment. Renaming
+  # the file or moving this job to another workflow breaks publishing until that setting is changed.
+  publish-types:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # what npm checks to know the publish came from this workflow
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Is this version on npm already?
+        id: version
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already on npm; nothing to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Trusted publishing needs npm 11.5.1 or later; Node 22 ships with npm 10.
+      - if: steps.version.outputs.publish == 'true'
+        run: npm install -g npm@latest
+
+      - if: steps.version.outputs.publish == 'true'
+        run: npm ci
+
+      - name: Generate Cloudflare types
+        if: steps.version.outputs.publish == 'true'
+        run: npm run cf-typegen
+
+      # prepublishOnly builds dist/ from src/client first.
+      - name: Publish
+        if: steps.version.outputs.publish == 'true'
+        run: npm publish --access public

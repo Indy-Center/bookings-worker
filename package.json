@@ -1,0 +1,43 @@
+{
+	"name": "@indy-center/bookings-worker",
+	"version": "1.0.0",
+	"description": "Typed RPC wrapper around the ATC booking API, for other Indy Center Workers",
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Indy-Center/bookings-worker.git"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"cf-typegen": "wrangler types --env-interface Env",
+		"format": "prettier --write .",
+		"lint": "prettier --check .",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"build:lib": "tsc -p tsconfig.lib.json",
+		"prepublishOnly": "npm run build:lib",
+		"pretest": "npm run build:lib"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20260930.2",
+		"@types/node": "^25.6.0",
+		"prettier": "^3.8.3",
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.3",
+		"wrangler": "^4.145.0"
+	}
+}
