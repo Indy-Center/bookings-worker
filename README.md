@@ -4,6 +4,8 @@ Cloudflare Worker that wraps the [ATC booking API](https://bookings.zlcartcc.org
 
 Following the [RPC vs Queue pattern](https://tech.flyindycenter.com/patterns/rpc-vs-queue/), callers reach it over a service binding. It has no HTTP route and isn't on the internet.
 
+> **Status: in development, not deployed.** CI (`ci.yml`) runs on pull requests and on every push to `main`. **Build and Deploy (`build-and-deploy.yml`) does not run automatically**: it is manual-only, started from the Actions tab, until we change it. Nothing is deployed to Cloudflare or published to npm until someone runs it. To turn automatic deploys back on, add `push: { branches: [main] }` under `on:` in `build-and-deploy.yml`, after the queues, secrets and npm trusted publishing in [Setup](#setup) exist.
+
 ## How it behaves
 
 - **Writes are queued.** Create, update and cancel a booking, set the bookable positions, and roster changes all return once queued. Nobody waits for, or needs to handle, the booking system's answer.
