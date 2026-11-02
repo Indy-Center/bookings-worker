@@ -1,8 +1,8 @@
 name: Build and Deploy
 
+# Manual only for now: run it from the Actions tab. To deploy on every push to main again, add
+# `push: { branches: [main] }` under `on:`.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
