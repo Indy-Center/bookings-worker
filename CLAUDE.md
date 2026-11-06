@@ -66,7 +66,27 @@ From https://tech.flyindycenter.com and the `indy-larry` worker (`Code_Work/indy
 
 ## Not deployed yet
 
-Nothing is live. Before the first deploy: create the queues `bookings-jobs` and `bookings-jobs-dlq`; add repo secrets `ENV_BOOKING_API_URL` (including `/api`) and `ENV_BOOKING_API_KEY` (`CLOUDFLARE_WORKERS_API_KEY` is an org secret, already set and shared with this repo; indy-larry deploys with it); optionally the repo variable `ENV_FAILURE_ALERT_CHANNEL` (the plan is `bookings-alerts`, which must also be added to Larry's `ENV_SEND_CHANNELS` as `bookings-alerts:<channelId>`, then Larry redeployed); set npm trusted publishing to this repo and `build-and-deploy.yml`.
+Nothing is live.
+
+### TODO before the first build and deploy
+
+- [x] `CLOUDFLARE_WORKERS_API_KEY`: org secret, already set and shared with this repo (indy-larry deploys with it).
+- [x] Repo variable `ENV_FAILURE_ALERT_CHANNEL` = `bookings-alerts`.
+- [x] `bookings-alerts:<channelId>` added to Larry's `ENV_SEND_CHANNELS` and Larry redeployed.
+- [ ] Repo secrets `ENV_BOOKING_API_URL` (including `/api`) and `ENV_BOOKING_API_KEY`, from whoever holds the organization's key.
+- [ ] Create the queues `bookings-jobs` and `bookings-jobs-dlq` (needs Cloudflare access).
+- [ ] Set npm trusted publishing to this repo and `build-and-deploy.yml`. The first deploy publishes `2.0.0` of the types and a publish can't be undone.
+- [ ] CI green on `main`.
+- [ ] Try it against the real booking API with `wrangler dev` and a `.dev.vars` (copy `.dev.vars.example`): one booking, one update, one cancel, one `setPositions`, one roster upsert.
+- [ ] Send a test alert: queue a booking the booking system will refuse and check it lands in `bookings-alerts`.
+- [ ] Run Build and Deploy by hand (`workflow_dispatch`), only when told to.
+
+### After the first deploy
+
+- [ ] The CMS pushes its positions through the `Positions` entrypoint (DEV-231).
+- [ ] The Community website switches to `Bookings`, reading `getPositions` and showing `radioName` under each facility (DEV-233).
+- [ ] Training Tools uses `Roster` (DEV-232).
+- [ ] Settle how T2 endorsements reach the booking system (see Open questions).
 
 ## Open questions
 
