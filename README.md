@@ -20,11 +20,11 @@ Following the [RPC vs Queue pattern](https://tech.flyindycenter.com/patterns/rpc
 
 Published as `@indy-center/bookings-worker` (built from `src/client/`). Each app binds to its own entrypoint, so it can only call what it needs:
 
-| Entrypoint           | Used by           | Methods                                                                                                                                                   |
-| -------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Bookings` (default) | Community website | `listBookings`, `listOrgBookings`, `getPositions`, `createBooking`, `updateBooking`, `cancelBooking`                                                      |
-| `Positions`          | CMS               | `setPositions`                                                                                                                                            |
-| `Roster`             | Training Tools    | `listMembers`, `upsertMember`, `upsertMembers`, `replaceRoster`, `removeMember`, `grantEndorsement`\*, `revokeEndorsement`\* (\*throw for now, see below) |
+| Entrypoint           | Used by           | Methods                                                                                                                                                                                                     |
+| -------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Bookings` (default) | Community website | `listBookings`, `listOrgBookings`, `getPositions`, `createBooking`, `updateBooking`, `cancelBooking`                                                                                                        |
+| `Positions`          | CMS               | `setPositions`                                                                                                                                                                                              |
+| `Roster`             | Training Tools    | `listMembers`, `upsertMember`, `upsertMembers`, `replaceRoster`, `removeMember`, `grantEndorsement`\*, `revokeEndorsement`\* (\*throw for now: the booking system has no API-key endpoint for endorsements) |
 
 ```jsonc
 // caller's wrangler.jsonc
@@ -82,7 +82,5 @@ npm test             # builds the published types first
 
 ## Open questions
 
-- **Endorsements.** The booking API documents T2 and other endorsements only under `/org/session/*`, which are portal endpoints needing a signed-in session, not the API key. `grantEndorsement` and `revokeEndorsement` define the contract but throw until the booking system confirms an API-key path.
-- **Positions body.** The docs show `PUT /org/positions` as `{ "positions": [...] }` without saying whether items are strings or `{ callsign }` objects. `src/jobs.ts` sends strings, in one place (`positionsBody`). Confirm against the real API.
 - **Ordering.** A queue doesn't guarantee order. `max_concurrency: 1` and the not-found retries cover the common case, but a cancel sent immediately after a create that keeps failing could be processed first.
 - **Shared limits.** The booking API limits requests per client address (100 per 15 minutes). Every app's calls come from this worker, so they share it.

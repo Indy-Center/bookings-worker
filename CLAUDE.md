@@ -70,8 +70,6 @@ Nothing is live. Before the first deploy: create the queues `bookings-jobs` and 
 
 ## Open questions
 
-- **Positions body**: the docs show `PUT /org/positions` as `{ "positions": [...] }` without saying whether items are strings or `{ callsign }` objects. We send strings. Verify against the real API.
-- **Endorsements**: ask the booking system's maintainers whether an API-key path exists for T2 endorsements. ATM owns this question.
 - **Ordering**: a cancel sent right after a create that keeps failing could be processed first. The not-found retries cover the common case only.
 - **Rejected bookings are invisible** to callers: a refused booking never appears in `listOrgBookings`, so the Community UI should show "pending" until its `externalId` shows up.
 - **Shared rate limit**: the booking API limits 100 requests per 15 minutes per client address, shared by every app through this worker.
