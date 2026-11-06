@@ -65,7 +65,7 @@ const positions = await env.BOOKINGS.getPositions();
 ## Setup
 
 1. Create the queues: `npx wrangler queues create bookings-jobs` and `npx wrangler queues create bookings-jobs-dlq`.
-2. Repo secrets: `CLOUDFLARE_WORKERS_API_KEY` (Workers Scripts:Edit, Queues:Edit), `ENV_BOOKING_API_URL` (the base URL **including `/api`**) and `ENV_BOOKING_API_KEY`. Optional repo variable: `ENV_FAILURE_ALERT_CHANNEL`, a channel name from Larry's `SEND_CHANNELS` (we use `bookings-alerts`; add `bookings-alerts:<channelId>` to Larry's `ENV_SEND_CHANNELS` and redeploy Larry first).
+2. Repo secrets: `ENV_BOOKING_API_URL` (the base URL **including `/api`**) and `ENV_BOOKING_API_KEY`. `CLOUDFLARE_WORKERS_API_KEY` (Workers Scripts:Edit, Queues:Edit) is an org secret, already set. Optional repo variable: `ENV_FAILURE_ALERT_CHANNEL`, a channel name from Larry's `SEND_CHANNELS` (we use `bookings-alerts`; add `bookings-alerts:<channelId>` to Larry's `ENV_SEND_CHANNELS` and redeploy Larry first).
 3. On npmjs.com, set the package's trusted publisher to this repository and `build-and-deploy.yml`.
 4. For `wrangler dev`, copy `.dev.vars.example` to `.dev.vars`.
 
