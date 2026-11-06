@@ -20,11 +20,11 @@ Following the [RPC vs Queue pattern](https://tech.flyindycenter.com/patterns/rpc
 
 Published as `@indy-center/bookings-worker` (built from `src/client/`). Each app binds to its own entrypoint, so it can only call what it needs:
 
-| Entrypoint           | Used by           | Methods                                                                                                                                                                                                     |
-| -------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Bookings` (default) | Community website | `listBookings`, `listOrgBookings`, `getPositions`, `createBooking`, `updateBooking`, `cancelBooking`                                                                                                        |
-| `Positions`          | CMS               | `setPositions`                                                                                                                                                                                              |
-| `Roster`             | Training Tools    | `listMembers`, `upsertMember`, `upsertMembers`, `replaceRoster`, `removeMember`, `grantEndorsement`\*, `revokeEndorsement`\* (\*throw for now: the booking system has no API-key endpoint for endorsements) |
+| Entrypoint           | Used by           | Methods                                                                                                                                                                                                                                     |
+| -------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Bookings` (default) | Community website | `listBookings`, `listOrgBookings`, `getPositions`, `createBooking`, `updateBooking`, `cancelBooking`                                                                                                                                        |
+| `Positions`          | CMS               | `setPositions`                                                                                                                                                                                                                              |
+| `Roster`             | Training Tools    | `listMembers`, `upsertMember`, `upsertMembers`, `replaceRoster`, `removeMember`, `grantEndorsement`\*, `revokeEndorsement`\* (\*throw for now: the booking system has no API-key endpoint for endorsements, so T2 is granted in its portal) |
 
 ```jsonc
 // caller's wrangler.jsonc
@@ -82,5 +82,6 @@ npm test             # builds the published types first
 
 ## Open questions
 
+- **Endorsements from Training Tools.** How T2 endorsements get from our training system into the booking system is not settled: its endorsement endpoints are portal-only. We are checking whether the VATUSA sync already covers T2, and will otherwise ask the booking system's maintainers for an API-key endpoint or a supported feed. Until then admins grant T2 in the portal.
 - **Ordering.** A queue doesn't guarantee order. `max_concurrency: 1` and the not-found retries cover the common case, but a cancel sent immediately after a create that keeps failing could be processed first.
 - **Shared limits.** The booking API limits requests per client address (100 per 15 minutes). Every app's calls come from this worker, so they share it.

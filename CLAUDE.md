@@ -26,7 +26,7 @@ Published as `@indy-center/bookings-worker` (types only, from `src/client/`). Re
 - **Alerts** go to a staff channel through Larry (`indy-larry` Worker, `LARRY.enqueue`), named by `FAILURE_ALERT_CHANNEL`. Empty means log only. Alerts never ping (`allowedMentions: { parse: [] }`).
 - **Writes use the `/bookings/external/*` endpoints** with a caller-supplied `externalId`, so retries are idempotent and update/cancel address the booking by that ID.
 - **Only fields Indy Center needs** are passed through: `division`/`subdivision` and timestamps are dropped, `cid` is a number, times are `Date`, and the feed's `mentoring` type is normalized to `training`.
-- **Endorsements**: `grantEndorsement`/`revokeEndorsement` exist as a contract for Training Tools but throw "not available yet". The booking docs list endorsements and GCAP restrictions only under `/org/session/*`, which needs a portal session, not the API key.
+- **Endorsements**: `grantEndorsement`/`revokeEndorsement` exist as a contract for Training Tools but throw "not available yet". The booking docs list endorsements and GCAP restrictions only under `/org/session/*`, which needs a portal session, not the API key. GCAP applies to every booking, including ours: a controller without the matching endorsement (e.g. T2) is refused with a 422 whose key is `restriction`, which this worker drops and alerts. Endorsements reach the booking system by portal grant, a VATUSA or VATEUD sync (every 15 minutes, read-only), or an organization's own training system (how that connects is undocumented). Portal sign-in is VATSIM Connect OAuth for listed admin CIDs, so the worker cannot log in on its own.
 - **Roster**: `upsertMembers` never removes anyone; `replaceRoster` sets `prune: true`, refuses an empty list and is capped at 1200 members (one queue message is 128 KB, and a prune cannot be split). `upsertMembers` chunks at 1000.
 
 ## Layout
@@ -70,6 +70,7 @@ Nothing is live. Before the first deploy: create the queues `bookings-jobs` and 
 
 ## Open questions
 
+- **Endorsements from Training Tools**: how do T2 endorsements get from our training system into the booking system? Its endpoints are portal-only. First check whether the VATUSA sync already covers T2; otherwise ask the booking system's maintainers (ATM owns this) for an API-key endpoint or a supported feed from an organization's own training system. Until then admins grant T2 in the portal.
 - **Ordering**: a cancel sent right after a create that keeps failing could be processed first. The not-found retries cover the common case only.
 - **Rejected bookings are invisible** to callers: a refused booking never appears in `listOrgBookings`, so the Community UI should show "pending" until its `externalId` shows up.
 - **Shared rate limit**: the booking API limits 100 requests per 15 minutes per client address, shared by every app through this worker.
