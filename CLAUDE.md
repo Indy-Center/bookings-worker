@@ -66,7 +66,7 @@ From https://tech.flyindycenter.com and the `indy-larry` worker (`Code_Work/indy
 
 ## Not deployed yet
 
-Nothing is live. Before the first deploy: create the queues `bookings-jobs` and `bookings-jobs-dlq`; add repo secrets `CLOUDFLARE_WORKERS_API_KEY`, `ENV_BOOKING_API_URL` (including `/api`) and `ENV_BOOKING_API_KEY`; optionally the repo variable `ENV_FAILURE_ALERT_CHANNEL`; set npm trusted publishing to this repo and `build-and-deploy.yml`.
+Nothing is live. Before the first deploy: create the queues `bookings-jobs` and `bookings-jobs-dlq`; add repo secrets `CLOUDFLARE_WORKERS_API_KEY`, `ENV_BOOKING_API_URL` (including `/api`) and `ENV_BOOKING_API_KEY`; optionally the repo variable `ENV_FAILURE_ALERT_CHANNEL` (the plan is `bookings-alerts`, which must also be added to Larry's `ENV_SEND_CHANNELS` as `bookings-alerts:<channelId>`, then Larry redeployed); set npm trusted publishing to this repo and `build-and-deploy.yml`.
 
 ## Open questions
 
