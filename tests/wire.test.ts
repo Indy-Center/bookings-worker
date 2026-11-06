@@ -104,6 +104,7 @@ describe('wire mapping', () => {
 					name: 'Anderson Muni ATCT',
 					parent: { id: 'IND', name: 'Indianapolis ATCT/TRACON' }
 				},
+				starred: true,
 				requiredCredentials: [{ anyOf: ['A-GC'] }]
 			},
 			{
@@ -112,6 +113,7 @@ describe('wire mapping', () => {
 				radioName: 'Columbus Approach',
 				frequency: 121500000,
 				facility: { id: 'CMH', name: 'Columbus ATCT/TRACON', parent: null },
+				starred: false,
 				requiredCredentials: []
 			}
 		]);

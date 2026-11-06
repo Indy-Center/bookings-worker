@@ -113,6 +113,7 @@ export function fromCmsPositions(feed: unknown): Position[] {
 					name: String(facility.name),
 					parent: parent ? { id: String(parent.id), name: String(parent.name) } : null
 				},
+				starred: p.starred === true,
 				requiredCredentials: (Array.isArray(p.requiredCredentials)
 					? (p.requiredCredentials as Wire[])
 					: []

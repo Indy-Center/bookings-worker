@@ -79,6 +79,8 @@ export type Position = {
 	frequency: number;
 	/** The facility the position belongs to, and its parent, to group positions under. */
 	facility: Facility & { parent: Facility | null };
+	/** Whether the CMS marks the position as starred (a featured position). */
+	starred: boolean;
 	/**
 	 * Credentials needed: every entry must be met, and an entry is met by holding any one of its
 	 * `anyOf` credentials (or a higher one: E-RC, T-RC, A-LC, S-LC, A-GC, S-GC from the top down).
