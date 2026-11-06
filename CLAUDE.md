@@ -73,7 +73,8 @@ Nothing is live.
 - [x] `CLOUDFLARE_WORKERS_API_KEY`: org secret, already set and shared with this repo (indy-larry deploys with it).
 - [x] Repo variable `ENV_FAILURE_ALERT_CHANNEL` = `bookings-alerts`.
 - [x] `bookings-alerts:<channelId>` added to Larry's `ENV_SEND_CHANNELS` and Larry redeployed.
-- [ ] Repo secrets `ENV_BOOKING_API_URL` (including `/api`) and `ENV_BOOKING_API_KEY`, from whoever holds the organization's key.
+- [ ] Repo secret `ENV_BOOKING_API_URL`: Indy Center's booking system base URL **including `/api`** (GitHub: Settings, Secrets and variables, Actions, Secrets tab). The deploy sets it on the Worker as `BOOKING_API_URL`.
+- [ ] Repo secret `ENV_BOOKING_API_KEY`: the organization's API key, from whoever holds it (same place). The deploy sets it as `BOOKING_API_KEY`.
 - [ ] Create the queues `bookings-jobs` and `bookings-jobs-dlq` (needs Cloudflare access).
 - [ ] Set npm trusted publishing to this repo and `build-and-deploy.yml`. The first deploy publishes `2.0.0` of the types and a publish can't be undone.
 - [ ] CI green on `main`.
