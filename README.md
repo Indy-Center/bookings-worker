@@ -1,6 +1,6 @@
 # bookings
 
-Cloudflare Worker that wraps the [ATC booking API](https://bookings.zlcartcc.org/api-docs) for other Indy Center Workers. It holds the API key, passes on only the fields Indy Center uses, and owns all error handling: callers fire and forget.
+Cloudflare Worker that wraps the ATC booking API (a VATSIM ATC booking system) for other Indy Center Workers. It holds the API key, passes on only the fields Indy Center uses, and owns all error handling: callers fire and forget.
 
 Following the [RPC vs Queue pattern](https://tech.flyindycenter.com/patterns/rpc-vs-queue/), callers reach it over a service binding. It has no HTTP route and isn't on the internet.
 

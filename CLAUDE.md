@@ -11,7 +11,7 @@ Notes for Claude Code (and anyone else) working in this repo. The README says wh
 
 ## What this is
 
-A Cloudflare Worker (`bookings`) that wraps the ATC booking API (https://bookings.zlcartcc.org/api-docs, a VATSIM ATC booking system) for other Indy Center Workers. Jira: DEV-230 (this worker), DEV-231 (CMS keeps the bookable positions list), DEV-232 (Training Tools manages the roster and T2 endorsements), DEV-233 (Community website uses this worker for all booking needs). The Community website is Thomas Henkel's; CMS and Training Tools are ATM's.
+A Cloudflare Worker (`bookings`) that wraps the ATC booking API (a VATSIM ATC booking system) for other Indy Center Workers. Jira: DEV-230 (this worker), DEV-231 (CMS keeps the bookable positions list), DEV-232 (Training Tools manages the roster and T2 endorsements), DEV-233 (Community website uses this worker for all booking needs). The Community website is Thomas Henkel's; CMS and Training Tools are ATM's.
 
 Published as `@indy-center/bookings-worker` (types only, from `src/client/`). Repo: https://github.com/Indy-Center/bookings-worker.
 
@@ -90,7 +90,7 @@ Nothing is live.
 
 ## Open questions
 
-- **Endorsements from Training Tools**: how do T2 endorsements get from our training system into the booking system? Its endpoints are portal-only. First check whether the VATUSA sync already covers T2; otherwise ask the booking system's maintainers (ATM owns this) for an API-key endpoint or a supported feed from an organization's own training system. Until then admins grant T2 in the portal.
+- **Endorsements from Training Tools**: how do T2 endorsements get from our training system into the booking system? Its endpoints are portal-only. In the ZID Bookings Integration chat the booking system's maintainer (VATSIM) said issuing endorsements and solos "can all be done with the API" and offered custom tweaks, so ask him to confirm an API-key path (ATM owns this). Also check whether the VATUSA sync already covers T2. Until then admins grant T2 in the portal.
 - **Ordering**: a cancel sent right after a create that keeps failing could be processed first. The not-found retries cover the common case only.
 - **Rejected bookings are invisible** to callers: a refused booking never appears in `listOrgBookings`, so the Community UI should show "pending" until its `externalId` shows up.
 - **Shared rate limit**: the booking API limits 100 requests per 15 minutes per client address, shared by every app through this worker.
