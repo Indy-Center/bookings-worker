@@ -23,7 +23,7 @@ Published as `@indy-center/bookings-worker` (built from `src/client/`). Each app
 | Entrypoint           | Used by           | Methods                                                                                                                                                   |
 | -------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Bookings` (default) | Community website | `listBookings`, `listOrgBookings`, `getPositions`, `createBooking`, `updateBooking`, `cancelBooking`                                                      |
-| `Positions`          | CMS               | `getPositions`, `setPositions`                                                                                                                            |
+| `Positions`          | CMS               | `setPositions`                                                                                                                                            |
 | `Roster`             | Training Tools    | `listMembers`, `upsertMember`, `upsertMembers`, `replaceRoster`, `removeMember`, `grantEndorsement`\*, `revokeEndorsement`\* (\*throw for now, see below) |
 
 ```jsonc
@@ -56,7 +56,8 @@ await env.BOOKINGS.cancelBooking({ externalId: String(row.id) });
 // Reads return data. A booking that was refused never appears here, so a UI can show "pending"
 // until its externalId shows up.
 const bookings = await env.BOOKINGS.listOrgBookings();
-const { restricted, positions } = await env.BOOKINGS.getPositions();
+// From the CMS positions feed; retired positions are left out.
+const positions = await env.BOOKINGS.getPositions();
 ```
 
 `setPositions` replaces the **whole** list, so send every position every time. `replaceRoster` removes everyone not listed (portal admins are never removed) and refuses an empty list; use `upsertMembers` to add or update without removing anyone.

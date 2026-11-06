@@ -10,7 +10,7 @@ import type {
 	BookingsRpc,
 	Member,
 	NewBooking,
-	PositionList,
+	Position,
 	PositionsBinding,
 	RosterBinding
 } from '../dist';
@@ -25,7 +25,7 @@ describe('published surface', () => {
 			end: new Date()
 		};
 		const member: Member = { cid: 1234567, rating: 5, isMentor: true };
-		const positions: PositionList = { restricted: false, positions: [] };
+		const positions: Position[] = [];
 		const rpc = { async createBooking() {} } as unknown as BookingsRpc;
 		// The bindings can't be constructed but should be nameable.
 		type _types = [Booking, BookingsBinding, PositionsBinding, RosterBinding];

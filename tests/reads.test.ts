@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cachedRead } from '../src/reads';
+import { cachedPositionsFeed, cachedRead } from '../src/reads';
 import { env, fakeCache, fakeFetch, json } from './helpers';
 
 describe('cachedRead', () => {
@@ -43,5 +43,26 @@ describe('cachedRead', () => {
 		await expect(cachedRead(env, '/bookings?type=x', fakeCache(), f.impl)).rejects.toThrow(
 			/bad filter/
 		);
+	});
+
+	describe('cachedPositionsFeed', () => {
+		const url = 'https://cms.test/positions';
+
+		it('reads the public feed without the booking key, then serves it from cache', async () => {
+			const cache = fakeCache();
+			const f = fakeFetch(json(200, [{ callsign: 'IND_TWR' }]));
+			expect(await cachedPositionsFeed(url, cache, f.impl)).toEqual([{ callsign: 'IND_TWR' }]);
+			expect(await cachedPositionsFeed(url, cache, f.impl)).toEqual([{ callsign: 'IND_TWR' }]);
+			expect(f.calls).toHaveLength(1);
+			expect(f.calls[0].url).toBe(url);
+			expect(JSON.stringify(f.calls[0].init)).not.toMatch(/Authorization/i);
+		});
+
+		it('throws, naming the CMS, when it is down and nothing was saved', async () => {
+			const f = fakeFetch(json(503, {}));
+			await expect(cachedPositionsFeed(url, fakeCache(), f.impl)).rejects.toThrow(
+				/The CMS is unavailable/
+			);
+		});
 	});
 });

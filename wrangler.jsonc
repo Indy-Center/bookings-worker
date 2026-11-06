@@ -14,6 +14,7 @@
 	// FAILURE_ALERT_CHANNEL (a Larry SEND_CHANNELS name) is passed by the deploy with --var; leave it
 	// empty and failures are only logged.
 	"vars": {
+		"POSITIONS_URL": "https://cms.flyindycenter.com/api/public/v1/positions",
 		"FAILURE_ALERT_CHANNEL": ""
 	},
 	// Every write is queued: callers fire and forget, and consume() retries or drops it.

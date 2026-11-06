@@ -1,6 +1,6 @@
 {
 	"name": "@indy-center/bookings-worker",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"description": "Typed RPC wrapper around the ATC booking API, for other Indy Center Workers",
 	"type": "module",
 	"repository": {

@@ -1,4 +1,4 @@
-import { call, type UpstreamEnv } from './upstream';
+import { call, getJson, type Outcome, type UpstreamEnv } from './upstream';
 
 export type CacheLike = Pick<Cache, 'match' | 'put'>;
 
@@ -14,36 +14,59 @@ function entry(data: unknown, seconds: number) {
 }
 
 /**
- * GET from the booking API, returning its `data` as-is. Served from cache for 30 seconds. When the
- * booking system is down, serves the last copy we saw, up to an hour old, instead of failing.
+ * Load through `load`, returning its data as-is. Served from cache for 30 seconds. When the source
+ * is down, serves the last copy we saw, up to an hour old, instead of failing. `source` names the
+ * system in error messages.
  */
-export async function cachedRead(
-	env: UpstreamEnv,
-	path: string,
-	cache: CacheLike = caches.default,
-	fetchImpl: typeof fetch = fetch
+async function cached(
+	key: string,
+	source: string,
+	load: () => Promise<Outcome>,
+	cache: CacheLike
 ): Promise<unknown> {
-	const fresh = await cache.match(keyFor('fresh', path));
+	const fresh = await cache.match(keyFor('fresh', key));
 	if (fresh) return fresh.json();
 
-	const outcome = await call(env, { method: 'GET', path }, fetchImpl);
+	const outcome = await load();
 	if (outcome.ok) {
 		await Promise.all([
-			cache.put(keyFor('fresh', path), entry(outcome.data, FRESH_SECONDS)),
-			cache.put(keyFor('stale', path), entry(outcome.data, STALE_SECONDS))
+			cache.put(keyFor('fresh', key), entry(outcome.data, FRESH_SECONDS)),
+			cache.put(keyFor('stale', key), entry(outcome.data, STALE_SECONDS))
 		]);
 		return outcome.data;
 	}
 
 	if (outcome.kind === 'rejected') {
-		throw new Error(`The booking system refused the request: ${outcome.message}`);
+		throw new Error(`${source} refused the request: ${outcome.message}`);
 	}
-	const stale = await cache.match(keyFor('stale', path));
+	const stale = await cache.match(keyFor('stale', key));
 	if (stale) {
-		console.warn(`Serving a saved copy of ${path}: ${outcome.message}`);
+		console.warn(`Serving a saved copy of ${key}: ${outcome.message}`);
 		return stale.json();
 	}
-	throw new Error(
-		`The booking system is unavailable and there is no saved copy: ${outcome.message}`
+	throw new Error(`${source} is unavailable and there is no saved copy: ${outcome.message}`);
+}
+
+/** GET from the booking API, returning its `data` as-is. */
+export function cachedRead(
+	env: UpstreamEnv,
+	path: string,
+	cache: CacheLike = caches.default,
+	fetchImpl: typeof fetch = fetch
+): Promise<unknown> {
+	return cached(
+		path,
+		'The booking system',
+		() => call(env, { method: 'GET', path }, fetchImpl),
+		cache
 	);
+}
+
+/** GET the CMS positions feed (a public URL, no key), returning the JSON as-is. */
+export function cachedPositionsFeed(
+	url: string,
+	cache: CacheLike = caches.default,
+	fetchImpl: typeof fetch = fetch
+): Promise<unknown> {
+	return cached(url, 'The CMS', () => getJson(url, fetchImpl), cache);
 }

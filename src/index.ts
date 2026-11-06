@@ -15,13 +15,13 @@ import type {
 	EndorsementGrant,
 	Member,
 	NewBooking,
-	PositionList,
+	Position,
 	PositionsRpc,
 	RosterRpc
 } from './client/api';
 import { consume, type ConsumeEnv } from './consume';
 import type { Job } from './jobs';
-import { cachedRead } from './reads';
+import { cachedPositionsFeed, cachedRead } from './reads';
 import {
 	checkChange,
 	checkMember,
@@ -33,7 +33,7 @@ import {
 import {
 	fromWireBooking,
 	fromWireMember,
-	fromWirePositions,
+	fromCmsPositions,
 	toQuery,
 	toWireMember,
 	toWireNew,
@@ -55,8 +55,8 @@ async function listBookings(env: Env, path: string): Promise<Booking[]> {
 	return ((await cachedRead(env, path)) as Wire[]).map(fromWireBooking);
 }
 
-async function getPositions(env: Env): Promise<PositionList> {
-	return fromWirePositions((await cachedRead(env, '/org/positions')) as Wire);
+async function getPositions(env: Env): Promise<Position[]> {
+	return fromCmsPositions(await cachedPositionsFeed(env.POSITIONS_URL));
 }
 
 /** For the Community website. */
@@ -98,10 +98,6 @@ export default class Bookings extends WorkerEntrypoint<Env> implements BookingsR
 
 /** For the CMS. Bind with `"entrypoint": "Positions"`. */
 export class Positions extends WorkerEntrypoint<Env> implements PositionsRpc {
-	getPositions() {
-		return getPositions(this.env);
-	}
-
 	setPositions(callsigns: string[] | null) {
 		return send(this.env, { op: 'positions.set', positions: checkPositions(callsigns) });
 	}

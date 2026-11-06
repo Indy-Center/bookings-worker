@@ -61,17 +61,30 @@ export type BookingChange = {
 
 export type BookingRef = { externalId: string };
 
-/** A position controllers may book. */
-export type Position = {
-	callsign: string;
-	/** Endorsements (restrictions) that cover it; empty means only the rating applies. */
-	requires: { name: string; tier: string }[];
-};
+/** A facility, e.g. `{ id: 'IND', name: 'Indianapolis ATCT/TRACON' }`. */
+export type Facility = { id: string; name: string };
 
-export type PositionList = {
-	/** False when no list is set, which means any valid callsign may be booked. */
-	restricted: boolean;
-	positions: Position[];
+/**
+ * A bookable position, from the CMS positions feed (the source of truth for the ARTCC's bookable
+ * positions). Retired positions are left out.
+ */
+export type Position = {
+	/** e.g. `AID_GND`. What you pass to `createBooking`. */
+	callsign: string;
+	/** e.g. `Ground Control`. */
+	name: string;
+	/** What to show controllers, e.g. `Anderson Ground`. */
+	radioName: string;
+	/** In Hz, e.g. `121600000`. */
+	frequency: number;
+	/** The facility the position belongs to, and its parent, to group positions under. */
+	facility: Facility & { parent: Facility | null };
+	/**
+	 * Credentials needed: every entry must be met, and an entry is met by holding any one of its
+	 * `anyOf` credentials (or a higher one: E-RC, T-RC, A-LC, S-LC, A-GC, S-GC from the top down).
+	 * Empty means no credential is required. The booking system makes the final decision.
+	 */
+	requiredCredentials: { anyOf: string[] }[];
 };
 
 export type RosterRole = 'member' | 'manager';
@@ -122,8 +135,8 @@ export interface BookingsRpc extends Rpc.WorkerEntrypointBranded {
 	listBookings(filter?: BookingFilter): Promise<Booking[]>;
 	/** All of Indy Center's bookings, including ones made outside this worker. */
 	listOrgBookings(): Promise<Booking[]>;
-	/** The bookable positions, for building a booking form. */
-	getPositions(): Promise<PositionList>;
+	/** The bookable positions from the CMS, for building a booking form. */
+	getPositions(): Promise<Position[]>;
 	/** Queue a booking. Idempotent on `externalId`. Throws only if the request is malformed. */
 	createBooking(booking: NewBooking): Promise<void>;
 	/** Queue a change to a booking made with `externalId`. */
@@ -132,9 +145,8 @@ export interface BookingsRpc extends Rpc.WorkerEntrypointBranded {
 	cancelBooking(ref: BookingRef): Promise<void>;
 }
 
-/** For the CMS: the list of bookable positions. Bind with `"entrypoint": "Positions"`. */
+/** For the CMS: set the booking system's list of bookable positions. Bind with `"entrypoint": "Positions"`. */
 export interface PositionsRpc extends Rpc.WorkerEntrypointBranded {
-	getPositions(): Promise<PositionList>;
 	/**
 	 * Queue a replacement of the **whole** list. Send every position every time, because anything left
 	 * out stops being bookable. `null` removes the list, so any valid callsign may be booked. If any

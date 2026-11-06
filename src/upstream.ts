@@ -56,6 +56,31 @@ export function classify(status: number, body: Wire | null, headers: Headers): O
 	return { ok: false, kind: 'rejected', message };
 }
 
+/**
+ * GET a public JSON endpoint that needs no key and has no `{ success, data }` envelope (the CMS
+ * positions feed). Never throws; sorted into an {@link Outcome} like `call`.
+ */
+export async function getJson(url: string, fetchImpl: typeof fetch = fetch): Promise<Outcome> {
+	let response: Response;
+	try {
+		response = await fetchImpl(url, { headers: { Accept: 'application/json' } });
+	} catch (error) {
+		return { ok: false, kind: 'retry', message: `Network error: ${(error as Error).message}` };
+	}
+	let body: unknown = null;
+	try {
+		body = await response.json();
+	} catch {
+		// Not JSON, e.g. an error page from a proxy.
+	}
+	if (!response.ok) {
+		const wire = body && typeof body === 'object' ? (body as Wire) : null;
+		return classify(response.status, wire, response.headers);
+	}
+	if (body === null) return { ok: false, kind: 'retry', message: 'Unreadable response' };
+	return { ok: true, data: body };
+}
+
 /** Call the booking API. Never throws; network trouble comes back as `retry`. */
 export async function call(
 	env: UpstreamEnv,

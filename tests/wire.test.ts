@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	fromWireBooking,
 	fromWireMember,
-	fromWirePositions,
+	fromCmsPositions,
 	parseUtc,
 	toQuery,
 	toWireNew
@@ -62,20 +62,59 @@ describe('wire mapping', () => {
 			isHome: true,
 			isMentor: false
 		});
-		expect(
-			fromWirePositions({
-				restricted: true,
-				positions: [
-					{ callsign: 'IND_TWR', requires: [{ id: 1, name: 'Tower', tier: 'T1' }] },
-					{ callsign: 'IND_GND' }
-				]
-			})
-		).toEqual({
-			restricted: true,
-			positions: [
-				{ callsign: 'IND_TWR', requires: [{ name: 'Tower', tier: 'T1' }] },
-				{ callsign: 'IND_GND', requires: [] }
-			]
-		});
+	});
+
+	it('reads the CMS positions feed, leaving out retired positions', () => {
+		const feed = [
+			{
+				id: '01X',
+				callsign: 'AID_GND',
+				name: 'Ground Control',
+				shortName: 'AID GC',
+				radioName: 'Anderson Ground',
+				frequency: 121600000,
+				facility: {
+					id: 'AID',
+					name: 'Anderson Muni ATCT',
+					parent: { id: 'IND', name: 'Indianapolis ATCT/TRACON' }
+				},
+				starred: true,
+				requiredCredentials: [{ anyOf: ['A-GC'] }],
+				retired: false
+			},
+			{
+				callsign: 'CMH_EM_APP',
+				name: 'CMH GUARD',
+				radioName: 'Columbus Approach',
+				frequency: 121500000,
+				facility: { id: 'CMH', name: 'Columbus ATCT/TRACON', parent: null },
+				requiredCredentials: [],
+				retired: false
+			},
+			{ callsign: 'OLD_TWR', retired: true }
+		];
+		expect(fromCmsPositions(feed)).toEqual([
+			{
+				callsign: 'AID_GND',
+				name: 'Ground Control',
+				radioName: 'Anderson Ground',
+				frequency: 121600000,
+				facility: {
+					id: 'AID',
+					name: 'Anderson Muni ATCT',
+					parent: { id: 'IND', name: 'Indianapolis ATCT/TRACON' }
+				},
+				requiredCredentials: [{ anyOf: ['A-GC'] }]
+			},
+			{
+				callsign: 'CMH_EM_APP',
+				name: 'CMH GUARD',
+				radioName: 'Columbus Approach',
+				frequency: 121500000,
+				facility: { id: 'CMH', name: 'Columbus ATCT/TRACON', parent: null },
+				requiredCredentials: []
+			}
+		]);
+		expect(() => fromCmsPositions({ positions: [] })).toThrow(/not a list/);
 	});
 });

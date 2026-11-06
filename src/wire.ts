@@ -5,7 +5,7 @@ import type {
 	BookingType,
 	Member,
 	NewBooking,
-	PositionList
+	Position
 } from './client/api';
 
 /** The booking API's JSON, loosely typed: we only read what we pass on, and tolerate the rest. */
@@ -92,16 +92,33 @@ export function fromWireMember(w: Wire): Member {
 	};
 }
 
-export function fromWirePositions(w: Wire): PositionList {
-	const positions = Array.isArray(w.positions) ? (w.positions as Wire[]) : [];
-	return {
-		restricted: w.restricted === true,
-		positions: positions.map((p) => ({
-			callsign: String(p.callsign),
-			requires: (Array.isArray(p.requires) ? (p.requires as Wire[]) : []).map((r) => ({
-				name: String(r.name),
-				tier: String(r.tier)
-			}))
-		}))
-	};
+/**
+ * The CMS positions feed (a bare array) as the bookable positions: retired ones are left out and only
+ * the fields Indy Center uses are kept.
+ */
+export function fromCmsPositions(feed: unknown): Position[] {
+	if (!Array.isArray(feed)) throw new Error('The CMS positions feed was not a list');
+	return (feed as Wire[])
+		.filter((p) => p.retired !== true)
+		.map((p) => {
+			const facility = (p.facility ?? {}) as Wire;
+			const parent = facility.parent as Wire | null | undefined;
+			return {
+				callsign: String(p.callsign),
+				name: String(p.name),
+				radioName: String(p.radioName),
+				frequency: Number(p.frequency),
+				facility: {
+					id: String(facility.id),
+					name: String(facility.name),
+					parent: parent ? { id: String(parent.id), name: String(parent.name) } : null
+				},
+				requiredCredentials: (Array.isArray(p.requiredCredentials)
+					? (p.requiredCredentials as Wire[])
+					: []
+				).map((c) => ({
+					anyOf: Array.isArray(c.anyOf) ? (c.anyOf as unknown[]).map(String) : []
+				}))
+			};
+		});
 }

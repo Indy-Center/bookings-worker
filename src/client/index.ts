@@ -1,4 +1,4 @@
-// Public types of @indy-center/bookings-worker 1.0.0.
+// Public types of @indy-center/bookings-worker 2.0.0.
 export type {
 	Booking,
 	BookingChange,
@@ -9,10 +9,10 @@ export type {
 	BookingsRpc,
 	EndorsementGrant,
 	EndorsementTier,
+	Facility,
 	Member,
 	NewBooking,
 	Position,
-	PositionList,
 	PositionsBinding,
 	PositionsRpc,
 	RosterBinding,
